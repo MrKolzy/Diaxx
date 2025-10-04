@@ -4,6 +4,7 @@
 
 #include <algorithm>   // std::ranges
 #include <cstring>     // std::strcmp
+#include <iostream>    // std::cerr
 #include <print>       // std::print
 #include <stdexcept>   // std::runtime_error
 #include <string>      // std::string
@@ -33,7 +34,8 @@ namespace Diaxx
 
 	void Vulkan::initializeVulkan() // 2.0
 	{
-		createInstance(); // 2.1
+		createInstance();           // 2.1
+		setupDebugMessenger();      // 2.2
 	}
 
 	// The instance is the connection between your application and the Vulkan library
@@ -49,16 +51,26 @@ namespace Diaxx
 		};
 
 		// Get the necessary extensions for the GLFW library
-		std::uint32_t glfwExtensionCount {};
-		const auto glfwExtensions { glfwGetRequiredInstanceExtensions(&glfwExtensionCount) };
+		const auto requiredGLFWExtensions = getGLFWExtensions();
+		checkGLFWExtensions(static_cast<std::uint32_t>(requiredGLFWExtensions.size()),
+			requiredGLFWExtensions.data());
 
-		checkExtensions(glfwExtensionCount, glfwExtensions);
+		// Get the necessary layers for the app
+		std::vector<const char*> requiredAppLayers {};
+		if (Constants::g_enableValidationLayers)
+		{
+			requiredAppLayers.assign(Constants::g_validationLayers.begin(),
+				Constants::g_validationLayers.end());
+		}	
+		checkAppLayers(requiredAppLayers);
 
 		// Structure that tells Vulkan which global extensions and validation layers to use
 		const vk::InstanceCreateInfo createInfo {
 			.pApplicationInfo        = &appInfo,
-			.enabledExtensionCount   = glfwExtensionCount,
-			.ppEnabledExtensionNames = glfwExtensions
+			.enabledLayerCount       = static_cast<std::uint32_t>(requiredAppLayers.size()),
+			.ppEnabledLayerNames     = requiredAppLayers.data(),
+			.enabledExtensionCount   = static_cast<std::uint32_t>(requiredGLFWExtensions.size()),
+			.ppEnabledExtensionNames = requiredGLFWExtensions.data()
 		};
 
 		// Issue the call to create an instance
@@ -66,7 +78,7 @@ namespace Diaxx
 	}
 
 	// Check if the extensions required for the GLFW library are compatible with Vulkan
-	void Vulkan::checkExtensions(std::uint32_t glfwExtensionCount, const auto& glfwExtensions)
+	void Vulkan::checkGLFWExtensions(std::uint32_t glfwExtensionCount, const auto& glfwExtensions)
 	{
 		const auto extensionProperties { m_context.enumerateInstanceExtensionProperties() };
 		for (std::uint32_t i {}; i < glfwExtensionCount; ++i)
@@ -81,12 +93,88 @@ namespace Diaxx
 		}
 
 		std::println("[Debug]: List of supported Vulkan instance extensions:");
-		for (const auto& extension : extensionProperties)
-			std::println("\t- {}", std::string_view(extension.extensionName));
+		for (const auto& supportedVulkanExtension : extensionProperties)
+			std::println("\t- {}", std::string_view(supportedVulkanExtension.extensionName));
 
 		std::println("\n[Debug]: List of extensions required by the GLFW library:");
 		for (std::uint32_t i {}; i < glfwExtensionCount; ++i)
-			std::println("\t- {}", std::string_view(glfwExtensions[i]));
+			std::println("\t- {}", glfwExtensions[i]);
+	}
+
+	// Check if the layers required for the app are compatible with Vulkan
+	void Vulkan::checkAppLayers(const auto& appLayers)
+	{
+		const auto layerProperties { m_context.enumerateInstanceLayerProperties() };
+		if (std::ranges::any_of(appLayers,
+			[&layerProperties](const auto& requiredLayer)
+			{
+				return std::ranges::none_of(layerProperties,
+					[requiredLayer](const auto& layerProperty)
+					{ return std::strcmp(layerProperty.layerName, requiredLayer) == 0; });
+			}))
+		{
+			throw std::runtime_error("One or more required layers are not supported.");
+		}
+
+		std::println("\n[Debug]: List of supported Vulkan layers:");
+		for (const auto& supportedVulkanLayer : layerProperties)
+			std::println("\t- {}", std::string_view(supportedVulkanLayer.layerName));
+
+		std::println("\n[Debug]: List of layers required by the app:");
+		for (const auto& requiredAppLayer : appLayers)
+			std::println("\t- {}", requiredAppLayer);
+	}
+
+	// Return the list of extensions based on whether validation layers are enabled or not
+	std::vector<const char*> Vulkan::getGLFWExtensions()
+	{
+		std::uint32_t glfwExtensionCount {};
+		const auto glfwExtensions { glfwGetRequiredInstanceExtensions(&glfwExtensionCount) };
+
+		std::vector updatedGLFWExtensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
+		if (Constants::g_enableValidationLayers)
+		{
+			// "VK_EXT_debug_utils"
+			updatedGLFWExtensions.push_back(vk::EXTDebugUtilsExtensionName);
+		}
+			
+		return updatedGLFWExtensions;
+	}
+
+	// Custom logging function that Vulkan calls when it detects something worth telling
+	VKAPI_ATTR vk::Bool32 VKAPI_CALL Vulkan::debugCallback(
+		vk::DebugUtilsMessageSeverityFlagBitsEXT, vk::DebugUtilsMessageTypeFlagsEXT,
+		const vk::DebugUtilsMessengerCallbackDataEXT* callbackData, void*)
+	{
+		std::cerr << "[Validation Layer]: " << callbackData->pMessage << '\n';
+
+		return vk::False;
+	}
+
+	// Connects the function debugCallback to the Vulkan API so you can see validation messages
+	void Vulkan::setupDebugMessenger()
+	{
+		if (!Constants::g_enableValidationLayers) return;
+
+		constexpr vk::DebugUtilsMessageSeverityFlagsEXT messageSeverity {
+			vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |
+			vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
+			vk::DebugUtilsMessageSeverityFlagBitsEXT::eError
+		};
+
+		constexpr vk::DebugUtilsMessageTypeFlagsEXT messageType {
+			vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
+			vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance |
+			vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation
+		};
+
+		constexpr vk::DebugUtilsMessengerCreateInfoEXT callbackData {
+			.messageSeverity = messageSeverity,
+			.messageType     = messageType,
+			.pfnUserCallback = &debugCallback
+		};
+
+		m_debugMessenger = m_instance.createDebugUtilsMessengerEXT(callbackData);
 	}
 
 	void Vulkan::mainLoop()
