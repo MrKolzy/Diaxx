@@ -16,26 +16,34 @@ namespace Diaxx
 		Vulkan()  = default;
 		~Vulkan() = default;
 
+		// Delete the copy constructor and the copy assignment operator
+		Vulkan(const Vulkan& vulkan)            = delete;
+		Vulkan& operator=(const Vulkan& vulkan) = delete;
+
+		// Delete the move constructor and the move assignment operator
+		Vulkan(Vulkan&& vulkan)            = delete;
+		Vulkan& operator=(Vulkan&& vulkan) = delete;
+
 		void run();
 
 	private:
-		void initializeWindow();    // 1.0
+		void initializeWindow() noexcept;    // 1.0
 
-		void initializeVulkan();    // 2.0
+		void initializeVulkan();             // 2.0
 
-		void createInstance();      // 2.1
-		void checkGLFWExtensions(std::uint32_t glfwExtensionCount, const auto& glfwExtensions);
-		void checkAppLayers(const auto& appLayers);
-		std::vector<const char*> getGLFWExtensions();
-		static VKAPI_ATTR vk::Bool32 VKAPI_CALL debugCallback(
+		void createInstance();               // 2.1
+		void checkGLFWExtensions(std::uint32_t glfwExtensionCount, const auto& glfwExtensions) const;
+		void checkAppLayers(const auto& appLayers) const;
+		[[nodiscard]] std::vector<const char*> getGLFWExtensions() const noexcept;
+		[[nodiscard]] static VKAPI_ATTR vk::Bool32 VKAPI_CALL debugCallback(
 			vk::DebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
 			vk::DebugUtilsMessageTypeFlagsEXT messageType,
-			const vk::DebugUtilsMessengerCallbackDataEXT* callbackData, void* userData);
+			const vk::DebugUtilsMessengerCallbackDataEXT* callbackData, void* userData) noexcept;
 
-		void setupDebugMessenger(); // 2.2
+		void setupDebugMessenger() noexcept; // 2.2
 
 		void mainLoop();
-		void cleanup();
+		void cleanup() noexcept;
 
 		GLFWwindow*                      m_window         {};
 		vk::raii::Context                m_context        {};

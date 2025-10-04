@@ -1,7 +1,7 @@
 #include "Diaxx/Vulkan.hpp"
 
-#include <cstdlib> // EXIT_SUCCESS and EXIT_FAILURE
-#include <iostream> // std::cerr
+#include <cstdlib>   // EXIT_SUCCESS and EXIT_FAILURE
+#include <iostream>  // std::cerr
 #include <stdexcept> // std::exception
 
 int main()

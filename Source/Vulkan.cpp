@@ -20,7 +20,7 @@ namespace Diaxx
 		cleanup();
 	}
 
-	void Vulkan::initializeWindow()
+	void Vulkan::initializeWindow() noexcept
 	{
 		glfwInit();
 
@@ -55,7 +55,7 @@ namespace Diaxx
 		checkGLFWExtensions(static_cast<std::uint32_t>(requiredGLFWExtensions.size()),
 			requiredGLFWExtensions.data());
 
-		// Get the necessary layers for the app
+		// Get the necessary layers for the application
 		std::vector<const char*> requiredAppLayers {};
 		if (Constants::g_enableValidationLayers)
 		{
@@ -78,7 +78,7 @@ namespace Diaxx
 	}
 
 	// Check if the extensions required for the GLFW library are compatible with Vulkan
-	void Vulkan::checkGLFWExtensions(std::uint32_t glfwExtensionCount, const auto& glfwExtensions)
+	void Vulkan::checkGLFWExtensions(std::uint32_t glfwExtensionCount, const auto& glfwExtensions) const
 	{
 		const auto extensionProperties { m_context.enumerateInstanceExtensionProperties() };
 		for (std::uint32_t i {}; i < glfwExtensionCount; ++i)
@@ -102,7 +102,7 @@ namespace Diaxx
 	}
 
 	// Check if the layers required for the app are compatible with Vulkan
-	void Vulkan::checkAppLayers(const auto& appLayers)
+	void Vulkan::checkAppLayers(const auto& appLayers) const
 	{
 		const auto layerProperties { m_context.enumerateInstanceLayerProperties() };
 		if (std::ranges::any_of(appLayers,
@@ -126,7 +126,7 @@ namespace Diaxx
 	}
 
 	// Return the list of extensions based on whether validation layers are enabled or not
-	std::vector<const char*> Vulkan::getGLFWExtensions()
+	std::vector<const char*> Vulkan::getGLFWExtensions() const noexcept
 	{
 		std::uint32_t glfwExtensionCount {};
 		const auto glfwExtensions { glfwGetRequiredInstanceExtensions(&glfwExtensionCount) };
@@ -144,7 +144,7 @@ namespace Diaxx
 	// Custom logging function that Vulkan calls when it detects something worth telling
 	VKAPI_ATTR vk::Bool32 VKAPI_CALL Vulkan::debugCallback(
 		vk::DebugUtilsMessageSeverityFlagBitsEXT, vk::DebugUtilsMessageTypeFlagsEXT,
-		const vk::DebugUtilsMessengerCallbackDataEXT* callbackData, void*)
+		const vk::DebugUtilsMessengerCallbackDataEXT* callbackData, void*) noexcept
 	{
 		std::cerr << "[Validation Layer]: " << callbackData->pMessage << '\n';
 
@@ -152,7 +152,7 @@ namespace Diaxx
 	}
 
 	// Connects the function debugCallback to the Vulkan API so you can see validation messages
-	void Vulkan::setupDebugMessenger()
+	void Vulkan::setupDebugMessenger() noexcept
 	{
 		if (!Constants::g_enableValidationLayers) return;
 
@@ -183,7 +183,7 @@ namespace Diaxx
 			glfwPollEvents();
 	}
 
-	void Vulkan::cleanup()
+	void Vulkan::cleanup() noexcept
 	{
 		glfwDestroyWindow(m_window);
 
