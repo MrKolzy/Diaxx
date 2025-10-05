@@ -36,6 +36,7 @@ namespace Diaxx
 	{
 		createInstance();           // 2.1
 		setupDebugMessenger();      // 2.2
+		pickPhysicalDevice();       // 2.3
 	}
 
 	// The instance is the connection between your application and the Vulkan library
@@ -87,8 +88,8 @@ namespace Diaxx
 				[glfwExtension = glfwExtensions[i]](const auto& extensionProperty)
 				{ return std::strcmp(extensionProperty.extensionName, glfwExtension) == 0; }))
 			{
-				throw std::runtime_error("The " + std::string(glfwExtensions[i]) +
-					" extension required by GLFW is not supported.\n");
+				throw std::runtime_error("[Error]: The " + std::string(glfwExtensions[i]) +
+					" extension required by GLFW is not supported.");
 			}
 		}
 
@@ -113,7 +114,7 @@ namespace Diaxx
 					{ return std::strcmp(layerProperty.layerName, requiredLayer) == 0; });
 			}))
 		{
-			throw std::runtime_error("One or more required layers are not supported.");
+			throw std::runtime_error("[Error]: One or more required layers are not supported.");
 		}
 
 		std::println("\n[Debug]: List of supported Vulkan layers:");
@@ -175,6 +176,53 @@ namespace Diaxx
 		};
 
 		m_debugMessenger = m_instance.createDebugUtilsMessengerEXT(callbackData);
+	}
+
+	// Look for and select a graphics card in the system that supports the features we need
+	void Vulkan::pickPhysicalDevice()
+	{
+		const auto devices { m_instance.enumeratePhysicalDevices() };
+		if (devices.empty())
+			throw std::runtime_error("[Error]: Failed to find GPUs with Vulkan support.");
+
+		const auto deviceIterator { std::ranges::find_if(devices,
+			[&](const auto& device)
+			{
+				// Every operation in Vulkan requires commands to be submitted to a queue
+				// There are different types of queues from different queue families
+				// Each family of queues allows only a subset of commands
+				const auto queueFamilies { device.getQueueFamilyProperties() };
+				bool isSuitable { device.getProperties().apiVersion >= VK_API_VERSION_1_3 };
+
+				// Queue Family Properties
+				const auto qfpIterator { std::ranges::find_if(queueFamilies,
+					[](const auto& qfp)
+					{ return (qfp.queueFlags & vk::QueueFlagBits::eGraphics) !=
+						static_cast<vk::QueueFlags>(0); }) };
+
+				isSuitable = isSuitable && (qfpIterator != queueFamilies.end());
+				const auto extensions { device.enumerateDeviceExtensionProperties() };
+				bool found { true };
+
+				// Compare the GPU extensions required for our app with the ones of each GPU
+				for (const auto& appExtension : Constants::g_deviceExtensions)
+				{
+					const auto extensionIterator { std::ranges::find_if(extensions,
+						[appExtension](const auto& deviceExtension)
+						{ return std::strcmp(deviceExtension.extensionName, appExtension) == 0; }) };
+
+					found = found && extensionIterator != extensions.end();
+				}
+
+				isSuitable = isSuitable && found;
+				if (isSuitable)
+					m_physicalDevice = vk::raii::PhysicalDevice(device);
+
+				return isSuitable;
+			}) };
+
+		if (deviceIterator == devices.end())
+			throw std::runtime_error("[Error]: Failed to find a suitable GPU.");
 	}
 
 	void Vulkan::mainLoop()

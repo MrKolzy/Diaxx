@@ -42,6 +42,8 @@ namespace Diaxx
 
 		void setupDebugMessenger() noexcept; // 2.2
 
+		void pickPhysicalDevice();           // 2.3
+
 		void mainLoop();
 		void cleanup() noexcept;
 
@@ -49,5 +51,6 @@ namespace Diaxx
 		vk::raii::Context                m_context        {};
 		vk::raii::Instance               m_instance       { nullptr };
 		vk::raii::DebugUtilsMessengerEXT m_debugMessenger { nullptr };
+		vk::raii::PhysicalDevice         m_physicalDevice { nullptr };
 	};
 }

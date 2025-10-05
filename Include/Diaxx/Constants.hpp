@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vulkan/vulkan_raii.hpp>
+
 #include <array> // std::array
 
 namespace Constants
@@ -14,4 +16,8 @@ namespace Constants
 #else
 	inline constexpr bool g_enableValidationLayers { true };
 #endif
+
+	inline constexpr std::array g_deviceExtensions { vk::KHRSwapchainExtensionName,
+		vk::KHRSpirv14ExtensionName, vk::KHRSynchronization2ExtensionName,
+		vk::KHRCreateRenderpass2ExtensionName };
 }
