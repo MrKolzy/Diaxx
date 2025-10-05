@@ -44,13 +44,19 @@ namespace Diaxx
 
 		void pickPhysicalDevice();           // 2.3
 
+		void createLogicalDevice() noexcept; // 2.4
+
 		void mainLoop();
 		void cleanup() noexcept;
 
-		GLFWwindow*                      m_window         {};
-		vk::raii::Context                m_context        {};
-		vk::raii::Instance               m_instance       { nullptr };
-		vk::raii::DebugUtilsMessengerEXT m_debugMessenger { nullptr };
-		vk::raii::PhysicalDevice         m_physicalDevice { nullptr };
+		GLFWwindow*                      m_window                   {};
+		vk::raii::Context                m_context                  {};
+		vk::raii::Instance               m_instance                 { nullptr };
+		vk::raii::DebugUtilsMessengerEXT m_debugMessenger           { nullptr };
+		vk::raii::PhysicalDevice         m_physicalDevice           { nullptr };
+		vk::raii::Device                 m_device                   { nullptr };
+		std::uint32_t                    m_graphicsQueueFamilyIndex {};
+		vk::PhysicalDeviceFeatures       m_deviceFeatures           {};
+		vk::raii::Queue                  m_graphicsQueue            { nullptr };
 	};
 }
