@@ -37,8 +37,9 @@ namespace Diaxx
 	{
 		createInstance();           // 2.1
 		setupDebugMessenger();      // 2.2
-		pickPhysicalDevice();       // 2.3
-		createLogicalDevice();      // 2.4
+		createSurface();            // 2.3
+		pickPhysicalDevice();       // 2.4
+		createLogicalDevice();      // 2.5
 	}
 
 	// The instance is the connection between your application and the Vulkan library
@@ -180,6 +181,17 @@ namespace Diaxx
 		m_debugMessenger = m_instance.createDebugUtilsMessengerEXT(callbackData);
 	}
 
+	// Connection between Vulkan and the window system to present results to the screen
+	void Vulkan::createSurface()
+	{
+		VkSurfaceKHR surface {};
+		if (glfwCreateWindowSurface(*m_instance, m_window, nullptr, &surface) != 0)
+			throw std::runtime_error("[Error]: Failed to create window surface.");
+
+		// Issue the call to create a surface
+		m_surface = vk::raii::SurfaceKHR(m_instance, surface);
+	}
+
 	// Look for and select a graphics card in the system that supports the features we need
 	void Vulkan::pickPhysicalDevice()
 	{
@@ -198,10 +210,25 @@ namespace Diaxx
 
 				// Queue Family Properties
 				const auto qfpIterator { std::ranges::find_if(queueFamilies,
-					[](const auto& qfp)
-					{ return (qfp.queueFlags & vk::QueueFlagBits::eGraphics) !=
-						static_cast<vk::QueueFlags>(0); }) };
+					[&](const auto& qfp)
+					{
+						const bool graphicsSupport {
+							(qfp.queueFlags & vk::QueueFlagBits::eGraphics) !=
+							static_cast<vk::QueueFlags>(0) };
 
+						const std::uint32_t index {
+							static_cast<std::uint32_t>(&qfp - queueFamilies.data()) };
+
+						// Check if the queue family supports presentation using the index
+						const VkBool32 presentationSupport {
+							device.getSurfaceSupportKHR(index, *m_surface) };
+						if (presentationSupport)
+							m_presentationQueueFamilyIndex = index;
+
+						return graphicsSupport;
+					}) };
+
+				// If the queue family supports graphics then it's suitable
 				isSuitable = isSuitable && (qfpIterator != queueFamilies.end());
 				const auto extensions { device.enumerateDeviceExtensionProperties() };
 				bool found { true };
@@ -234,8 +261,67 @@ namespace Diaxx
 	}
 
 	// After selecting a physical device we need a logical device to interface with it
-	void Vulkan::createLogicalDevice() noexcept
+	void Vulkan::createLogicalDevice()
 	{
+		const std::vector<vk::QueueFamilyProperties> queueFamilyProperties {
+			m_physicalDevice.getQueueFamilyProperties() };
+
+		// Find the queue family that supports graphics
+		const auto graphicsQueueFamilyProperty { std::ranges::find_if(queueFamilyProperties,
+			[](const auto& qfp)
+			{ return (qfp.queueFlags & vk::QueueFlagBits::eGraphics) !=
+				static_cast<vk::QueueFlags>(0); }) };
+
+		auto graphicsIndex { static_cast<std::uint32_t>(
+			std::distance(queueFamilyProperties.begin(), graphicsQueueFamilyProperty)) };
+		
+		// Check if the queue family also supports presentation using the index
+		auto presentationIndex { m_physicalDevice.getSurfaceSupportKHR(graphicsIndex, *m_surface) ?
+			graphicsIndex : static_cast<std::uint32_t>(queueFamilyProperties.size()) };
+
+		// The queue family doesn't support presentation
+		if (presentationIndex == queueFamilyProperties.size())
+		{
+			for (std::size_t i {}; i < queueFamilyProperties.size(); ++i)
+			{
+				// Look for another queue family that supports both graphics and presentation
+				if ((queueFamilyProperties[i].queueFlags & vk::QueueFlagBits::eGraphics) &&
+					m_physicalDevice.getSurfaceSupportKHR(static_cast<std::uint32_t>(i), *m_surface))
+				{
+					graphicsIndex     = static_cast<std::uint32_t>(i);
+					presentationIndex = graphicsIndex;
+					break;
+				}
+			}
+
+			// If no queue family supporting graphics and presentation has been found
+			if (presentationIndex == queueFamilyProperties.size())
+			{
+				// Find one queue family that supports only presentation
+				for (std::size_t i {}; i < queueFamilyProperties.size(); ++i)
+				{
+					if (m_physicalDevice.getSurfaceSupportKHR(
+							static_cast<std::uint32_t>(i), *m_surface))
+					{
+						presentationIndex = static_cast<std::uint32_t>(i);
+						break;
+					}
+				}
+			}
+		}
+
+		if ((graphicsIndex == queueFamilyProperties.size()) ||
+			(presentationIndex == queueFamilyProperties.size()))
+		{
+			throw std::runtime_error("[Error]: Could not find a queue for graphics or presentation.");
+		}
+
+		m_graphicsQueueFamilyIndex     = graphicsIndex;
+		m_presentationQueueFamilyIndex = presentationIndex;
+
+		// Vector for storing one or more device queue create infos
+		std::vector<vk::DeviceQueueCreateInfo> queueCreateInfos {};
+
 		// Assign priorities to queues between 0.0 and 1.0
 		constexpr float queuePriority { 0.0f };
 		const vk::DeviceQueueCreateInfo deviceQueueCreateInfo {
@@ -243,6 +329,17 @@ namespace Diaxx
 			.queueCount       = 1,
 			.pQueuePriorities = &queuePriority
 		};
+		queueCreateInfos.push_back(deviceQueueCreateInfo);
+
+		// If the presentation queue isn't the same as the graphics queue add it separately
+		if (m_presentationQueueFamilyIndex != m_graphicsQueueFamilyIndex)
+		{
+			queueCreateInfos.push_back({
+				.queueFamilyIndex = m_presentationQueueFamilyIndex,
+				.queueCount       = 1,
+				.pQueuePriorities = &queuePriority
+			});
+		}
 
 		// Structure chaining to enable multiple sets of features
 		const vk::StructureChain<vk::PhysicalDeviceFeatures2, vk::PhysicalDeviceVulkan13Features,
@@ -255,14 +352,16 @@ namespace Diaxx
 		// Creation of the logical device
 		const vk::DeviceCreateInfo deviceCreateInfo {
 			.pNext                   = &featureChain.get<vk::PhysicalDeviceFeatures2>(),
-			.queueCreateInfoCount    = 1,
-			.pQueueCreateInfos       = &deviceQueueCreateInfo,
+			.queueCreateInfoCount    = static_cast<std::uint32_t>(queueCreateInfos.size()),
+			.pQueueCreateInfos       = queueCreateInfos.data(),
 			.enabledExtensionCount   = static_cast<std::uint32_t>(Constants::g_deviceExtensions.size()),
 			.ppEnabledExtensionNames = Constants::g_deviceExtensions.data()
 		};
 
-		m_device        = vk::raii::Device(m_physicalDevice, deviceCreateInfo);
-		m_graphicsQueue = vk::raii::Queue(m_device, m_graphicsQueueFamilyIndex, 0);
+		// Issue the call to create a device, graphicsQueue and presentationQueue
+		m_device            = vk::raii::Device(m_physicalDevice, deviceCreateInfo);
+		m_graphicsQueue     = vk::raii::Queue(m_device, m_graphicsQueueFamilyIndex, 0);
+		m_presentationQueue = vk::raii::Queue(m_device, m_presentationQueueFamilyIndex, 0);
 	}
 
 	void Vulkan::mainLoop()

@@ -2,8 +2,9 @@
 
 #define VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
 
-#include <GLFW/glfw3.h>
 #include <vulkan/vulkan_raii.hpp>
+
+#include <GLFW/glfw3.h>
 
 #include <cstdint> // std::uint32_t
 #include <vector>  // std::vector
@@ -42,21 +43,26 @@ namespace Diaxx
 
 		void setupDebugMessenger() noexcept; // 2.2
 
-		void pickPhysicalDevice();           // 2.3
+		void createSurface();                // 2.3
 
-		void createLogicalDevice() noexcept; // 2.4
+		void pickPhysicalDevice();           // 2.4
+
+		void createLogicalDevice();          // 2.5
 
 		void mainLoop();
 		void cleanup() noexcept;
 
-		GLFWwindow*                      m_window                   {};
-		vk::raii::Context                m_context                  {};
-		vk::raii::Instance               m_instance                 { nullptr };
-		vk::raii::DebugUtilsMessengerEXT m_debugMessenger           { nullptr };
-		vk::raii::PhysicalDevice         m_physicalDevice           { nullptr };
-		vk::raii::Device                 m_device                   { nullptr };
-		std::uint32_t                    m_graphicsQueueFamilyIndex {};
-		vk::PhysicalDeviceFeatures       m_deviceFeatures           {};
-		vk::raii::Queue                  m_graphicsQueue            { nullptr };
+		GLFWwindow*                      m_window                       {};
+		vk::raii::Context                m_context                      {};
+		vk::raii::Instance               m_instance                     { nullptr };
+		vk::raii::DebugUtilsMessengerEXT m_debugMessenger               { nullptr };
+		vk::raii::PhysicalDevice         m_physicalDevice               { nullptr };
+		vk::raii::Device                 m_device                       { nullptr };
+		std::uint32_t                    m_graphicsQueueFamilyIndex     {};
+		vk::PhysicalDeviceFeatures       m_deviceFeatures               {};
+		vk::raii::Queue                  m_graphicsQueue                { nullptr };
+		vk::raii::SurfaceKHR             m_surface                      { nullptr };
+		std::uint32_t                    m_presentationQueueFamilyIndex {};
+		vk::raii::Queue                  m_presentationQueue            { nullptr };
 	};
 }
