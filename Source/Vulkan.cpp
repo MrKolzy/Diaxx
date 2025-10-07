@@ -6,10 +6,10 @@
 #include <cstring>     // std::strcmp
 #include <iostream>    // std::cerr
 #include <iterator>    // std::distance
-#include <print>       // std::print
+#include <print>       
 #include <stdexcept>   // std::runtime_error
-#include <string>      // std::string
-#include <string_view> // std::string_view
+#include <string>    
+#include <string_view>
 
 namespace Diaxx
 {
@@ -29,6 +29,7 @@ namespace Diaxx
 		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 		glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
+		// Issue the call to create a window
 		m_window = glfwCreateWindow(Constants::g_width, Constants::g_height,
 			"Diaxx", nullptr, nullptr);
 	}
@@ -178,6 +179,7 @@ namespace Diaxx
 			.pfnUserCallback = &debugCallback
 		};
 
+		// Issue the call to create a debugMessenger
 		m_debugMessenger = m_instance.createDebugUtilsMessengerEXT(callbackData);
 	}
 
@@ -233,7 +235,7 @@ namespace Diaxx
 				const auto extensions { device.enumerateDeviceExtensionProperties() };
 				bool found { true };
 
-				// Compare the GPU extensions required for our app with the ones of each GPU
+				// Compare the GPU extensions required for our app with the ones of the current GPU
 				for (const auto& appExtension : Constants::g_deviceExtensions)
 				{
 					const auto extensionIterator { std::ranges::find_if(extensions,
@@ -246,6 +248,7 @@ namespace Diaxx
 				isSuitable = isSuitable && found;
 				if (isSuitable)
 				{
+					// Issue the call to create a physical device
 					m_physicalDevice = vk::raii::PhysicalDevice(device);
 
 					const std::uint32_t queueFamilyIndex { static_cast<std::uint32_t>(

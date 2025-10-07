@@ -2,7 +2,7 @@
 
 #include <vulkan/vulkan_raii.hpp>
 
-#include <array> // std::array
+#include <array>
 
 namespace Constants
 {

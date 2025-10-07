@@ -7,7 +7,7 @@
 #include <GLFW/glfw3.h>
 
 #include <cstdint> // std::uint32_t
-#include <vector>  // std::vector
+#include <vector>
 
 namespace Diaxx
 {
