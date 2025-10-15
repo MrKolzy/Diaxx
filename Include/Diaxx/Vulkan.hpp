@@ -49,6 +49,14 @@ namespace Diaxx
 
 		void createLogicalDevice();          // 2.5
 
+		void createSwapChain() noexcept;     // 2.6
+		[[nodiscard]] vk::SurfaceFormatKHR chooseSwapSurfaceFormat(
+			const std::vector<vk::SurfaceFormatKHR>& availableFormats) const noexcept;
+		[[nodiscard]] vk::PresentModeKHR chooseSwapPresentationMode(
+			const std::vector<vk::PresentModeKHR>& availablePresentationModes) const noexcept;
+		[[nodiscard]] vk::Extent2D chooseSwapExtent(
+			const vk::SurfaceCapabilitiesKHR& capabilities) const noexcept;
+
 		void mainLoop();
 		void cleanup() noexcept;
 
@@ -64,5 +72,9 @@ namespace Diaxx
 		vk::raii::SurfaceKHR             m_surface                      { nullptr };
 		std::uint32_t                    m_presentationQueueFamilyIndex {};
 		vk::raii::Queue                  m_presentationQueue            { nullptr };
+		vk::raii::SwapchainKHR           m_swapChain                    { nullptr };
+		std::vector<vk::Image>           m_swapChainImages              {};
+		vk::Format                       m_swapChainImageFormat         { vk::Format::eUndefined };
+		vk::Extent2D                     m_swapChainExtent              {};
 	};
 }

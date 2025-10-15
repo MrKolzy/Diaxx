@@ -2,12 +2,14 @@
 
 #include "Diaxx/Constants.hpp"
 
-#include <algorithm>   // std::ranges
-#include <cstring>     // std::strcmp
-#include <iostream>    // std::cerr
-#include <iterator>    // std::distance
+#include <algorithm> // std::ranges
+#include <array>
+#include <cstring>   // std::strcmp
+#include <iostream>  // std::cerr
+#include <iterator>  // std::distance
+#include <limits>    // std::numeric_limits 
 #include <print>       
-#include <stdexcept>   // std::runtime_error
+#include <stdexcept> // std::runtime_error
 #include <string>    
 #include <string_view>
 
@@ -41,6 +43,7 @@ namespace Diaxx
 		createSurface();            // 2.3
 		pickPhysicalDevice();       // 2.4
 		createLogicalDevice();      // 2.5
+		createSwapChain();          // 2.6
 	}
 
 	// The instance is the connection between your application and the Vulkan library
@@ -151,7 +154,7 @@ namespace Diaxx
 		vk::DebugUtilsMessageSeverityFlagBitsEXT, vk::DebugUtilsMessageTypeFlagsEXT,
 		const vk::DebugUtilsMessengerCallbackDataEXT* callbackData, void*) noexcept
 	{
-		std::cerr << "[Validation Layer]: " << callbackData->pMessage << '\n';
+		std::cerr << "\n[Validation Layer]: " << callbackData->pMessage << '\n';
 
 		return vk::False;
 	}
@@ -322,6 +325,16 @@ namespace Diaxx
 		m_graphicsQueueFamilyIndex     = graphicsIndex;
 		m_presentationQueueFamilyIndex = presentationIndex;
 
+		const auto availableExtensions { m_physicalDevice.enumerateDeviceExtensionProperties() };
+
+		// Extension required to display images directly on the screen
+		const bool swapChainSupported { std::ranges::any_of(availableExtensions,
+			[](const auto& extension)
+			{ return std::strcmp(extension.extensionName, VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0; }) };
+
+		if (!swapChainSupported)
+			throw std::runtime_error("[Error]: Physical device doesn't support VK_KHR_swapchain.");
+
 		// Vector for storing one or more device queue create infos
 		std::vector<vk::DeviceQueueCreateInfo> queueCreateInfos {};
 
@@ -365,6 +378,127 @@ namespace Diaxx
 		m_device            = vk::raii::Device(m_physicalDevice, deviceCreateInfo);
 		m_graphicsQueue     = vk::raii::Queue(m_device, m_graphicsQueueFamilyIndex, 0);
 		m_presentationQueue = vk::raii::Queue(m_device, m_presentationQueueFamilyIndex, 0);
+	}
+
+	// Queue of images waiting to be presented to the screen synchronized with the refresh rate
+	void Vulkan::createSwapChain() noexcept
+	{
+		// VkPhysicalDevice and VkSurfaceKHR are the core components of the swap chain
+		const auto surfaceCapabilities { m_physicalDevice.getSurfaceCapabilitiesKHR(m_surface) };
+
+		// Query the supported surface formats
+		const vk::SurfaceFormatKHR swapChainSurfaceFormat { chooseSwapSurfaceFormat(
+			m_physicalDevice.getSurfaceFormatsKHR(m_surface)) };
+		m_swapChainImageFormat = swapChainSurfaceFormat.format;
+
+		const vk::Extent2D swapChainExtent { chooseSwapExtent(surfaceCapabilities) };
+		m_swapChainExtent = swapChainExtent;
+
+		auto minImageCount { std::max(3u, surfaceCapabilities.minImageCount) };
+		minImageCount = (surfaceCapabilities.maxImageCount > 0 &&
+			minImageCount > surfaceCapabilities.maxImageCount) ? surfaceCapabilities.maxImageCount :
+			minImageCount;
+
+		// Specify how many images we want in the swap chain, we increase it by one because
+		// sometimes we have to wait for the driver to complete internal operations
+		std::uint32_t imageCount { surfaceCapabilities.minImageCount + 1 };
+
+		// Make sure to not exceed the maximum number of images while doing this
+		if (surfaceCapabilities.maxImageCount > 0 && imageCount > surfaceCapabilities.maxImageCount)
+			imageCount = surfaceCapabilities.maxImageCount;
+
+		vk::SwapchainCreateInfoKHR swapChainCreateInfo {
+			.flags            = vk::SwapchainCreateFlagsKHR(),
+			.surface          = m_surface,
+			.minImageCount    = minImageCount,
+			.imageFormat      = swapChainSurfaceFormat.format,
+			.imageColorSpace  = swapChainSurfaceFormat.colorSpace,
+			.imageExtent      = swapChainExtent,
+			.imageArrayLayers = 1,
+			.imageUsage       = vk::ImageUsageFlagBits::eColorAttachment,
+			.imageSharingMode = vk::SharingMode::eExclusive,
+			.preTransform     = surfaceCapabilities.currentTransform,
+			.compositeAlpha   = vk::CompositeAlphaFlagBitsKHR::eOpaque,
+			// Query the supported presentation modes
+			.presentMode      = chooseSwapPresentationMode(
+				m_physicalDevice.getSurfacePresentModesKHR(m_surface)),
+			.clipped          = true,
+			.oldSwapchain     = nullptr
+		};
+
+		const std::array<std::uint32_t, 2> queueFamilyIndices { m_graphicsQueueFamilyIndex,
+			m_presentationQueueFamilyIndex };
+		
+		// Specify how to handle swap chain images that will be used across multiple queue families
+		if (m_graphicsQueueFamilyIndex != m_presentationQueueFamilyIndex)
+		{
+			swapChainCreateInfo.imageSharingMode      = vk::SharingMode::eConcurrent;
+			swapChainCreateInfo.queueFamilyIndexCount = 2;
+			swapChainCreateInfo.pQueueFamilyIndices   = queueFamilyIndices.data();
+		}
+		else
+		{
+			swapChainCreateInfo.imageSharingMode      = vk::SharingMode::eExclusive;
+			swapChainCreateInfo.queueFamilyIndexCount = 0;
+			swapChainCreateInfo.pQueueFamilyIndices   = nullptr;
+		}
+
+		// Issue the call to create a swapChain and swapChainImages
+		m_swapChain       = vk::raii::SwapchainKHR(m_device, swapChainCreateInfo);
+		m_swapChainImages = m_swapChain.getImages();
+	}
+
+	// Find the optimal settings for the best possible swap chain
+	vk::SurfaceFormatKHR Vulkan::chooseSwapSurfaceFormat(
+		const std::vector<vk::SurfaceFormatKHR>& availableFormats) const noexcept
+	{
+		for (const auto& availableFormat : availableFormats)
+		{
+			if (availableFormat.format == vk::Format::eB8G8R8A8Srgb &&
+				availableFormat.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear) // Color Depth
+			{
+				return availableFormat;
+			}
+		}
+
+		return availableFormats[0];
+	}
+
+	// The most important setting for the swap chain because it represents the actual conditions
+	// for showing images to the screen, there are four possible modes available in Vulkan
+	vk::PresentModeKHR Vulkan::chooseSwapPresentationMode(
+		const std::vector<vk::PresentModeKHR>& availablePresentationModes) const noexcept
+	{
+		for (const auto& availablePresentationMode : availablePresentationModes)
+		{
+			if (availablePresentationMode == vk::PresentModeKHR::eMailbox) // Triple Buffering
+				return availablePresentationMode;
+		}
+
+		return vk::PresentModeKHR::eFifo;
+	}
+
+	// Resolution of the swap chain images, it's almost always exactly equal to the resolution of
+	// the window that we're drawing to in pixels
+	vk::Extent2D Vulkan::chooseSwapExtent(
+		const vk::SurfaceCapabilitiesKHR& capabilities) const noexcept
+	{
+		// Match the resolution of the window by setting the width and height in currentExtent
+		if (capabilities.currentExtent.width != std::numeric_limits<std::uint32_t>::max())
+			return capabilities.currentExtent;
+
+		int width  {};
+		int height {};
+		// Vulkan works with pixels so we must use this function to query the resolution of the window
+		glfwGetFramebufferSize(m_window, &width, &height);
+
+		// Bound the values between the allowed minimum and maximum extents that are supported
+		return {
+			std::clamp<std::uint32_t>(static_cast<std::uint32_t>(width),
+				capabilities.minImageExtent.width, capabilities.maxImageExtent.width),
+			std::clamp<std::uint32_t>(static_cast<std::uint32_t>(height),
+				capabilities.minImageExtent.height, capabilities.maxImageExtent.height)
+		};
 	}
 
 	void Vulkan::mainLoop()
