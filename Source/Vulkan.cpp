@@ -381,7 +381,7 @@ namespace Diaxx
 	}
 
 	// Queue of images waiting to be presented to the screen synchronized with the refresh rate
-	void Vulkan::createSwapChain() noexcept
+	void Vulkan::createSwapChain()
 	{
 		// VkPhysicalDevice and VkSurfaceKHR are the core components of the swap chain
 		const auto surfaceCapabilities { m_physicalDevice.getSurfaceCapabilitiesKHR(m_surface) };

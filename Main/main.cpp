@@ -14,7 +14,7 @@ int main()
 	}
 	catch (const std::exception& exception)
 	{
-		std::cerr << exception.what();
+		std::cerr << "\n[Exception]: " << exception.what() << '\n';
 
 		return EXIT_FAILURE;
 	}

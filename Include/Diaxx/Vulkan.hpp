@@ -49,7 +49,7 @@ namespace Diaxx
 
 		void createLogicalDevice();          // 2.5
 
-		void createSwapChain() noexcept;     // 2.6
+		void createSwapChain();              // 2.6
 		[[nodiscard]] vk::SurfaceFormatKHR chooseSwapSurfaceFormat(
 			const std::vector<vk::SurfaceFormatKHR>& availableFormats) const noexcept;
 		[[nodiscard]] vk::PresentModeKHR chooseSwapPresentationMode(
