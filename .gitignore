@@ -1,0 +1,11 @@
+# Files
+Diaxx.slnx
+Diaxx.vcxproj
+Diaxx.vcxproj.filters
+Diaxx.vcxproj.user
+
+# Folders
+/Debug/
+/Diaxx/
+/Release/
+/x64/
