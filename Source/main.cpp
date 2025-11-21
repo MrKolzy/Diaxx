@@ -1,8 +1,19 @@
+#include "Process.h"
+
+#include <cstdio> // stderr
+#include <exception>
 #include <print>
 
 int main()
 {
-	std::print("Hello, world!");
+	try
+	{
+		const Diaxx::Process process { L"NoTePaD.eXe" };
+	}
+	catch (const std::exception& exception)
+	{
+		std::println(stderr, "[Exception]: {}", exception.what());
+	}
 
 	return 0;
 }
