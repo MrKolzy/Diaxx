@@ -20,10 +20,16 @@ namespace Diaxx
 		Process(Process&&)            = delete;
 		Process& operator=(Process&&) = delete;
 
+		[[nodiscard]] std::wstring_view getName()        const noexcept;
+		[[nodiscard]] std::uint32_t     getIdentifier()  const noexcept;
+		[[nodiscard]] std::uintptr_t    getBaseAddress() const noexcept;
+
 	private:
 		[[nodiscard]] bool getNameAndIdentifier(std::wstring_view name);
+		[[nodiscard]] bool getBaseAddress();
 
-		std::wstring  m_name       {};
-		std::uint32_t m_identifier {};
+		std::wstring   m_name        {};
+		std::uint32_t  m_identifier  {};
+		std::uintptr_t m_baseAddress {};
 	};
 }
