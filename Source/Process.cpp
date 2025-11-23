@@ -1,9 +1,12 @@
 #include "Process.h"
 
+#include <wil/resource.h>
+
 #include <cstdio>     // stderr
 #include <print>
 #include <stdexcept>  // std::runtime_error
 
+#define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 
 #include <TlHelp32.h> // CreateToolhelp32Snapshot
@@ -35,8 +38,9 @@ namespace Diaxx
 	{
 		bool isFound { false };
 
-		const HANDLE processSnapshot { CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) };
-		if (processSnapshot == INVALID_HANDLE_VALUE)
+		const wil::unique_handle processSnapshot { CreateToolhelp32Snapshot(
+			TH32CS_SNAPPROCESS, 0) };
+		if (processSnapshot.get() == INVALID_HANDLE_VALUE)
 		{
 			std::println(stderr, "[Error]: CreateToolhelp32Snapshot (Process)");
 			return false;
@@ -44,10 +48,9 @@ namespace Diaxx
 
 		PROCESSENTRY32 processEntry { .dwSize { sizeof(PROCESSENTRY32) } };
 
-		if (!Process32First(processSnapshot, &processEntry))
+		if (!Process32First(processSnapshot.get(), &processEntry))
 		{
 			std::println(stderr, "[Error]: Process32First");
-			CloseHandle(processSnapshot);
 			return false;
 		}
 			
@@ -61,9 +64,8 @@ namespace Diaxx
 				break;
 			}
 		}
-		while (Process32Next(processSnapshot, &processEntry));
+		while (Process32Next(processSnapshot.get(), &processEntry));
 
-		CloseHandle(processSnapshot);
 		return isFound;
 	}
 
@@ -71,9 +73,9 @@ namespace Diaxx
 	{
 		bool isFound { false };
 
-		const HANDLE moduleSnapshot { CreateToolhelp32Snapshot(TH32CS_SNAPMODULE32 |
-			TH32CS_SNAPMODULE, m_identifier) };
-		if (moduleSnapshot == INVALID_HANDLE_VALUE)
+		const wil::unique_handle moduleSnapshot { CreateToolhelp32Snapshot(
+			TH32CS_SNAPMODULE32 | TH32CS_SNAPMODULE, m_identifier) };
+		if (moduleSnapshot.get() == INVALID_HANDLE_VALUE)
 		{
 			std::println(stderr, "[Error]: CreateToolhelp32Snapshot (Module)");
 			std::println(stderr, "[Warning]: Check the process architecture");
@@ -82,10 +84,9 @@ namespace Diaxx
 
 		MODULEENTRY32 moduleEntry { .dwSize { sizeof(MODULEENTRY32) } };
 
-		if (!Module32First(moduleSnapshot, &moduleEntry))
+		if (!Module32First(moduleSnapshot.get(), &moduleEntry))
 		{
 			std::println(stderr, "[Error]: Module32First");
-			CloseHandle(moduleSnapshot);
 			return false;
 		}
 
@@ -98,9 +99,8 @@ namespace Diaxx
 				break;
 			}
 		}
-		while (Module32Next(moduleSnapshot, &moduleEntry));
+		while (Module32Next(moduleSnapshot.get(), &moduleEntry));
 
-		CloseHandle(moduleSnapshot);
 		return isFound;
 	}
 }
