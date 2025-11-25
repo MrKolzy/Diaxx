@@ -2,6 +2,7 @@
 
 #include <wil/resource.h>
 
+#include <array>
 #include <cstddef> // std::size_t
 #include <cstdint> // std::uint32_t
 #include <cstdio>  // stderr
@@ -30,6 +31,9 @@ namespace Diaxx
 		static T read(std::uintptr_t address)              noexcept;
 		template <typename T>
 		static bool write(T value, std::uintptr_t address) noexcept;
+		template <typename T, std::size_t N>
+		static T read(std::uintptr_t address,
+			const std::array<std::uintptr_t, N>& offsets)  noexcept;
 
 	private:
 		static inline wil::unique_handle m_process {};
@@ -39,7 +43,7 @@ namespace Diaxx
 	inline T Memory::read(std::uintptr_t address) noexcept
 	{
 		T value {};
-		std::size_t bytesRead {};
+		SIZE_T bytesRead {};
 
 		const BOOL result { ReadProcessMemory(m_process.get(),
 			reinterpret_cast<LPCVOID>(address), &value, sizeof(T), &bytesRead) };
@@ -56,7 +60,7 @@ namespace Diaxx
 	template<typename T>
 	inline bool Memory::write(T value, std::uintptr_t address) noexcept
 	{
-		std::size_t bytesWritten {};
+		SIZE_T bytesWritten {};
 
 		const BOOL result { WriteProcessMemory(m_process.get(),
 			reinterpret_cast<LPVOID>(address), &value, sizeof(T), &bytesWritten) };
@@ -68,5 +72,21 @@ namespace Diaxx
 		}
 
 		return true;
+	}
+
+	template<typename T, std::size_t N>
+	inline T Memory::read(std::uintptr_t address,
+		const std::array<std::uintptr_t, N>& offsets) noexcept
+	{
+		for (std::size_t i {}; i < offsets.size() - 1; ++i)
+		{
+			address += offsets[i];
+			address  = read<std::uintptr_t>(address);
+		}
+		
+		address += offsets[N - 1];
+		const T value { read<T>(address) };
+
+		return value;
 	}
 }
