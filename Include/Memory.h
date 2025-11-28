@@ -16,7 +16,7 @@ namespace Diaxx
 	class Memory
 	{
 	public:
-		Memory(std::uintptr_t processIdentifier) noexcept;
+		Memory(std::uintptr_t processIdentifier);
 		~Memory() = default;
 
 		// Prevent copying

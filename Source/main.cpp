@@ -10,7 +10,6 @@ int main()
 	try
 	{
 		const Diaxx::Process process { L"Ac_ClIeNt.ExE" };
-		const Diaxx::Memory  memory  { process.getIdentifier() };
 	}
 	catch (const std::exception& exception)
 	{

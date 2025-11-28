@@ -1,6 +1,9 @@
 #pragma once
 
+#include "Memory.h"
+
 #include <cstdint> // std::uint32_t
+#include <optional>
 #include <string>
 #include <string_view>
 
@@ -28,8 +31,9 @@ namespace Diaxx
 		[[nodiscard]] bool getNameAndIdentifier(std::wstring_view name);
 		[[nodiscard]] bool getBaseAddress();
 
-		std::wstring   m_name        {};
-		std::uint32_t  m_identifier  {};
-		std::uintptr_t m_baseAddress {};
+		std::wstring          m_name        {};
+		std::uint32_t         m_identifier  {};
+		std::uintptr_t        m_baseAddress {};
+		std::optional<Memory> m_memory      {};
 	};
 }

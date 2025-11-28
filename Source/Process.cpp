@@ -17,6 +17,8 @@ namespace Diaxx
 	{
 		if (!getNameAndIdentifier(name) || !getBaseAddress())
 			throw std::runtime_error("The process could not be found");
+
+		m_memory.emplace(getIdentifier());
 	}
 
 	std::wstring_view Process::getName() const noexcept
