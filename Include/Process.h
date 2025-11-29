@@ -30,6 +30,7 @@ namespace Diaxx
 	private:
 		[[nodiscard]] bool getNameAndIdentifier(std::wstring_view name);
 		[[nodiscard]] bool getBaseAddress();
+		void showInformation() const noexcept;
 
 		std::wstring          m_name        {};
 		std::uint32_t         m_identifier  {};

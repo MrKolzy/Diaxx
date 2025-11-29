@@ -18,6 +18,8 @@ namespace Diaxx
 		if (!getNameAndIdentifier(name) || !getBaseAddress())
 			throw std::runtime_error("The process could not be found");
 
+		showInformation();
+
 		m_memory.emplace(getIdentifier());
 	}
 
@@ -104,5 +106,12 @@ namespace Diaxx
 		while (Module32Next(moduleSnapshot.get(), &moduleEntry));
 
 		return isFound;
+	}
+
+	void Process::showInformation() const noexcept
+	{
+		std::wprintf(L"[Process Name        ]: %ls\n", m_name.c_str());
+		std::println("[Process Identifier  ]: {}", m_identifier);
+		std::println("[Process Base Address]: 0x{:X}", m_baseAddress);
 	}
 }
