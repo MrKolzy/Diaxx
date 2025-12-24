@@ -28,8 +28,8 @@ namespace Diaxx
 		[[nodiscard]] std::uintptr_t    getBaseAddress() const noexcept;
 
 	private:
-		[[nodiscard]] bool getNameAndIdentifier(std::wstring_view name);
-		[[nodiscard]] bool getBaseAddress();
+		[[nodiscard]] bool obtainNameAndIdentifier(std::wstring_view name);
+		[[nodiscard]] bool obtainBaseAddress();
 		void showInformation() const noexcept;
 
 		std::wstring          m_name        {};

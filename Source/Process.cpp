@@ -1,3 +1,6 @@
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+
 #include "Process.h"
 
 #include <wil/resource.h>
@@ -6,7 +9,6 @@
 #include <print>
 #include <stdexcept>  // std::runtime_error
 
-#define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 
 #include <TlHelp32.h> // CreateToolhelp32Snapshot
@@ -15,7 +17,7 @@ namespace Diaxx
 {
 	Process::Process(std::wstring_view name)
 	{
-		if (!getNameAndIdentifier(name) || !getBaseAddress())
+		if (!obtainNameAndIdentifier(name) || !obtainBaseAddress())
 			throw std::runtime_error("The process could not be found");
 
 		showInformation();
@@ -38,7 +40,7 @@ namespace Diaxx
 		return m_baseAddress;
 	}
 
-	bool Process::getNameAndIdentifier(std::wstring_view name)
+	bool Process::obtainNameAndIdentifier(std::wstring_view name)
 	{
 		bool isFound { false };
 
@@ -73,7 +75,7 @@ namespace Diaxx
 		return isFound;
 	}
 
-	bool Process::getBaseAddress()
+	bool Process::obtainBaseAddress()
 	{
 		bool isFound { false };
 

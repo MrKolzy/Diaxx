@@ -1,5 +1,8 @@
 #pragma once
 
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+
 #include <wil/resource.h>
 
 #include <array>
@@ -8,7 +11,6 @@
 #include <cstdio>  // stderr
 #include <print>
 
-#define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 
 namespace Diaxx
