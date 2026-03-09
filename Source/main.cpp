@@ -1,7 +1,8 @@
 #include "Memory.h"
 #include "Process.h"
 
-#include <cstdio> // stderr
+#include <cstdio>  // stderr
+#include <cstdlib> // EXIT_FAILURE, EXIT_SUCCESS
 #include <exception>
 #include <print>
 
@@ -14,7 +15,8 @@ int main()
 	catch (const std::exception& exception)
 	{
 		std::println(stderr, "[Exception]: {}", exception.what());
+		return EXIT_FAILURE;
 	}
 
-	return 0;
+	return EXIT_SUCCESS;
 }

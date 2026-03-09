@@ -6,12 +6,14 @@
 #include <wil/resource.h>
 
 #include <cstdio>     // stderr
+#include <cwchar>     // std::wprintf
 #include <print>
 #include <stdexcept>  // std::runtime_error
 
 #include <Windows.h>
 
 #include <TlHelp32.h> // CreateToolhelp32Snapshot
+#include <wchar.h>    // _wcsicmp
 
 namespace Diaxx
 {
@@ -110,7 +112,7 @@ namespace Diaxx
 		return isFound;
 	}
 
-	void Process::showInformation() const noexcept
+	void Process::showInformation() const
 	{
 		std::wprintf(L"[Process Name        ]: %ls\n", m_name.c_str());
 		std::println("[Process Identifier  ]: {}", m_identifier);

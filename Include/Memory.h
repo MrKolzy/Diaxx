@@ -18,7 +18,7 @@ namespace Diaxx
 	class Memory
 	{
 	public:
-		Memory(std::uintptr_t processIdentifier);
+		explicit Memory(std::uint32_t processIdentifier);
 		~Memory() = default;
 
 		// Prevent copying
@@ -30,19 +30,19 @@ namespace Diaxx
 		Memory& operator=(Memory&&) = delete;
 
 		template <typename T>
-		static T read(std::uintptr_t address)              noexcept;
+		static T read(std::uintptr_t address);
 		template <typename T>
-		static bool write(T value, std::uintptr_t address) noexcept;
+		static bool write(T value, std::uintptr_t address);
 		template <typename T, std::size_t N>
 		static T read(std::uintptr_t address,
-			const std::array<std::uintptr_t, N>& offsets)  noexcept;
+			const std::array<std::uintptr_t, N>& offsets);
 
 	private:
 		static inline wil::unique_handle m_process {};
 	};
 
 	template<typename T>
-	inline T Memory::read(std::uintptr_t address) noexcept
+	inline T Memory::read(std::uintptr_t address)
 	{
 		T value {};
 		SIZE_T bytesRead {};
@@ -60,7 +60,7 @@ namespace Diaxx
 	}
 
 	template<typename T>
-	inline bool Memory::write(T value, std::uintptr_t address) noexcept
+	inline bool Memory::write(T value, std::uintptr_t address)
 	{
 		SIZE_T bytesWritten {};
 
@@ -78,7 +78,7 @@ namespace Diaxx
 
 	template<typename T, std::size_t N>
 	inline T Memory::read(std::uintptr_t address,
-		const std::array<std::uintptr_t, N>& offsets) noexcept
+		const std::array<std::uintptr_t, N>& offsets)
 	{
 		for (std::size_t i {}; i < offsets.size() - 1; ++i)
 		{

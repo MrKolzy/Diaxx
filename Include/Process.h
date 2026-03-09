@@ -12,7 +12,7 @@ namespace Diaxx
 	class Process
 	{
 	public:
-		Process(std::wstring_view name);
+		explicit Process(std::wstring_view name);
 		~Process() = default;
 
 		// Prevent copying
@@ -30,7 +30,7 @@ namespace Diaxx
 	private:
 		[[nodiscard]] bool obtainNameAndIdentifier(std::wstring_view name);
 		[[nodiscard]] bool obtainBaseAddress();
-		void showInformation() const noexcept;
+		void showInformation() const;
 
 		std::wstring          m_name        {};
 		std::uint32_t         m_identifier  {};
